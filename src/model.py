@@ -8,6 +8,8 @@ from tqdm import tqdm
 from tqdm import trange
 import glob
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 
 class Net(nn.Module):
     def __init__(self):
@@ -23,31 +25,38 @@ class Net(nn.Module):
 
 net = Net()
 
+net.to(device)
+
 optimizer = optim.Adam(net.parameters(), lr=1e-3)
 
-criterion = nn.MSELoss()
-
-states = np.empty((1,4))
-actions = np.empty((1))
-rewards = np.empty((1))
-
-for ep_filepath in tqdm(glob.glob("./data/**/episode*.npz")):
-    data = np.load(ep_filepath)
-    states = np.append(states, data['states'][:-1], axis=0)
-    actions = np.append(actions, data['actions'], axis=0)
-    rewards = np.append(rewards, data['rewards'], axis=0)
+criterion = nn.L1Loss()
 
 epochs = 300
 for epoch in range(epochs):
-    for i in range(len(states)-1):
-        optimizer.zero_grad()
-        output = net(torch.from_numpy(np.append(states[i], actions[i]).astype(np.float32)))
+    for ep_filepath in glob.glob("./data/**/episode*.npz"):
+        data = np.load(ep_filepath)
 
-        loss = criterion(output, torch.from_numpy(np.append(states[i+1], rewards[i]).astype(np.float32)))
-        if i == 0:
-            print("loss", loss)
-            print("true label", np.append(states[i+1], rewards[i]))
-            print("predicted label", output)
+        states = data['states']
+        actions = data['actions']
+        rewards = data['rewards']
+
+        optimizer.zero_grad()
+        input = torch.from_numpy(np.append(states[:-1, :], np.expand_dims(actions, axis=1), axis=1).astype(np.float32))
+        input = input.to(device)
+        output = net(input)
+
+        label = torch.from_numpy(np.append(states[1:, :], np.expand_dims(rewards, axis=1), axis=1).astype(np.float32))
+        label = label.to(device)
+        loss = criterion(output, label)
         loss.backward()
         optimizer.step()
+    print("loss", loss)
+    if loss < 0.009:
+        break
 
+torch.save(net, "net.pth")
+
+data = np.load("data/offline_random_episodes/episode0.npz")
+input = torch.from_numpy(np.append(states[0, :], actions[0]).astype(np.float32)).to(device)
+print(net(input))
+print(states[1, :], rewards[0])
