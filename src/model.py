@@ -52,7 +52,7 @@ for epoch in range(epochs):
                                 np.expand_dims(rewards, axis=1),
                                 axis=1).astype(np.float32),
                       np.expand_dims(terminal, axis=1),
-                      axis=1))
+                      axis=1).astype(np.float32))
         label = label.to(device)
         loss = criterion(output, label)
         loss.backward()
@@ -64,7 +64,11 @@ for epoch in range(epochs):
 torch.save(net, "net.pth")
 
 data = np.load("data/offline_random_episodes/episode0.npz")
+states = data['states']
+actions = data['actions']
+rewards = data['rewards']
+terminal = data['terminal']
 input_tensor = torch.from_numpy(
     np.append(states[0, :], actions[0]).astype(np.float32)).to(device)
 print(net(input_tensor))
-print(states[1, :], rewards[0])
+print(states[1, :], rewards[0], terminal[0])

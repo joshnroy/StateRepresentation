@@ -22,12 +22,13 @@ for e in trange(num_episodes):
         observation, reward, done, info = env.step(action)
         rewards.append(reward)
         states.append(observation)
+        terminal.append(int(done))
 
         if done:
             states = np.array(states)
             actions = np.array(actions)
             rewards = np.array(rewards)
-            terminal = np.array(int(done))
+            terminal = np.array(terminal)
             np.savez_compressed("./data/offline_random_episodes/episode" +
                                 str(e),
                                 states=states,
