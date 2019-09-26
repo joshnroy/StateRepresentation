@@ -1,16 +1,15 @@
-from torch import nn 
+from torch import nn
 from torch.nn import functional as F
 import torch.optim as optim
-from glob import glob 
+from tqdm import tqdm
+import glob 
 
 class Net(nn.Module):
 
     def __init__(self):
         super(Net, self).__init__()
-        # 1 input image channel, 6 output channels, 3x3 square convolution
-        # kernel
-        self.fc1 = nn.Linear(5, 5)  # 6*6 from image dimension
-        self.fc2 = nn.Linear(5, 5)  # 6*6 from image dimension
+        self.fc1 = nn.Linear(5, 5)
+        self.fc2 = nn.Linear(5, 5)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -18,4 +17,19 @@ class Net(nn.Module):
         return x
 
 net = Net()
-print(net)
+
+optimizer = optim.Adam(net.parameters(), lr=1e-3)
+
+criterion = nn.MSELoss()
+
+for ep_filepath in tqdm(glob.glob("./data/episode*.npz")):
+    data = np.load(ep_filepath)
+
+for i in len(states)-1:
+    optimizer.zero_grad()
+    output = net(np.append(states[i], actions[i]))
+
+    loss = criterion(output, np.append(states[i+1], rewards[i]))
+    print("loss", loss)
+    loss.backward()
+    optimizer.step()
