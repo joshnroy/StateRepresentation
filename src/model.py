@@ -3,6 +3,7 @@ import numpy as np
 from torch.nn import functional as F
 import torch.optim as optim
 from tqdm import tqdm
+from tqdm import trange
 import glob
 
 
@@ -24,7 +25,6 @@ optimizer = optim.Adam(net.parameters(), lr=1e-3)
 
 criterion = nn.MSELoss()
 
-
 states = np.array([])
 actions = np.array([])
 rewards = np.array([])
@@ -35,7 +35,7 @@ for ep_filepath in tqdm(glob.glob("./data/episode*.npz")):
     np.append(actions, data['actions'])
     np.append(rewards, data['rewards'])
 
-for i in len(states) - 1:
+for i in trange(len(states) - 1):
     optimizer.zero_grad()
     output = net(np.append(states[i], actions[i]))
 

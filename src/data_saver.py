@@ -2,6 +2,7 @@ import gym
 import numpy as np
 from tqdm import trange
 import sys
+import os
 
 num_episodes = 100
 
@@ -25,7 +26,7 @@ for e in trange(num_episodes):
             states = np.array(states)
             actions = np.array(actions)
             rewards = np.array(rewards)
-            np.savez_compressed("offline_random_episodes/episode" + str(e),
+            np.savez_compressed("./data/offline_random_episodes/episode" + str(e),
                                 states=states,
                                 actions=actions,
                                 rewards=rewards)
