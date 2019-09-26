@@ -1,5 +1,7 @@
 from torch import nn 
 from torch.nn import functional as F
+import torch.optim as optim
+from glob import glob 
 
 class Net(nn.Module):
 
