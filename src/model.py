@@ -1,6 +1,9 @@
+import torch
 from torch import nn
 from torch.nn import functional as F
 import torch.optim as optim
+import numpy as np
+import sys
 
 class Net(nn.Module):
 
@@ -22,13 +25,20 @@ criterion = nn.MSELoss()
 
 data = np.load("data/offline_random_episodes/episode0.npz")
 
-states = 
+states = data["states"]
+actions = data["actions"]
+rewards = data["rewards"]
 
-for i in len(states)-1:
-    optimizer.zero_grad()
-    output = net(np.append(states[i], actions[i]))
+epochs = 300
+for epoch in range(epochs):
+    for i in range(len(states)-1):
+        optimizer.zero_grad()
+        output = net(torch.from_numpy(np.append(states[i], actions[i]).astype(np.float32)))
 
-    loss = criterion(output, np.append(states[i+1], rewards[i]))
-    print("loss", loss)
-    loss.backward()
-    optimizer.step()
+        loss = criterion(output, torch.from_numpy(np.append(states[i+1], rewards[i]).astype(np.float32)))
+        if i == 0:
+            print("loss", loss)
+            print("true label", np.append(states[i+1], rewards[i]))
+            print("predicted label", output)
+        loss.backward()
+        optimizer.step()
