@@ -13,7 +13,6 @@ for e in trange(num_episodes):
     observation = env.reset()
     states.append(observation)
     for _ in range(1000):
-
         action = env.action_space.sample() # your agent here (this takes random actions)
         actions.append(action)
 
@@ -25,7 +24,10 @@ for e in trange(num_episodes):
             states = np.array(states)
             actions = np.array(actions)
             rewards = np.array(rewards)
-            np.savez_compressed("data/offline_random_episodes/episode" + str(e), states=states, actions=actions, rewards=rewards)
+            np.savez_compressed("offline_random_episodes/episode" + str(e),
+                                states=states,
+                                actions=actions,
+                                rewards=rewards)
 
             states = []
             actions = []
