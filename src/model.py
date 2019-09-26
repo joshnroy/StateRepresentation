@@ -3,8 +3,6 @@ from torch import nn
 from torch.nn import functional as F
 import torch.optim as optim
 import numpy as np
-import sys
-from tqdm import tqdm
 import glob
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -16,7 +14,7 @@ class Net(nn.Module):
         self.fc1 = nn.Linear(5, 5)
         self.fc2 = nn.Linear(5, 6)
 
-    def forward(self, x):
+    def forward(self, x):  # pylint: disable=arguments-differ
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x
@@ -24,7 +22,6 @@ class Net(nn.Module):
 
 net = Net()
 net.to(device)
-
 
 optimizer = optim.Adam(net.parameters(), lr=1e-3)
 
@@ -43,7 +40,8 @@ if train:
 
             optimizer.zero_grad()
             input_tensor = torch.from_numpy(
-                np.append(states[:-1, :], np.expand_dims(actions, axis=1),
+                np.append(states[:-1, :],
+                          np.expand_dims(actions, axis=1),
                           axis=1).astype(np.float32))
             input_tensor = input_tensor.to(device)
             output = net(input_tensor)
