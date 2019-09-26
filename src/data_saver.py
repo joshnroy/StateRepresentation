@@ -11,6 +11,7 @@ for e in trange(num_episodes):
     states = []
     actions = []
     rewards = []
+    terminal = []
     observation = env.reset()
     states.append(observation)
     for _ in range(1000):
@@ -26,15 +27,18 @@ for e in trange(num_episodes):
             states = np.array(states)
             actions = np.array(actions)
             rewards = np.array(rewards)
+            terminal = np.array(int(done))
             np.savez_compressed("./data/offline_random_episodes/episode" +
                                 str(e),
                                 states=states,
                                 actions=actions,
-                                rewards=rewards)
+                                rewards=rewards,
+                                terminal=terminal)
 
             states = []
             actions = []
             rewards = []
+            terminal = []
 
             break
 
