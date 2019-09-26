@@ -2,7 +2,8 @@
 
 ## TODO Cartpole:
 
-- [] Implement Prediction of done (end of reward)
+- [x] Implement Prediction of done (end of reward)
+- [] Simulate random policy in "dream"
 - [] Train in "dream" with Q-learning
 - [] Plan (value iteration? or N-step rollout?) using the model
 - [] Keep track of observed policy online and retrain model with collected data
