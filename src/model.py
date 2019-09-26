@@ -27,21 +27,18 @@ optimizer = optim.Adam(net.parameters(), lr=1e-3)
 
 criterion = nn.MSELoss()
 
-states = np.array([])
-actions = np.array([])
-rewards = np.array([])
+states = np.empty((1,4))
+actions = np.empty((1))
+rewards = np.empty((1))
 
-for ep_filepath in tqdm(glob.glob("./data/episode*.npz")):
+for ep_filepath in tqdm(glob.glob("./data/**/episode*.npz")):
     data = np.load(ep_filepath)
-    np.append(states, data['states'])
-    np.append(actions, data['actions'])
-    np.append(rewards, data['rewards'])
-
-
+    states = np.append(states, data['states'][:-1], axis=0)
+    actions = np.append(actions, data['actions'], axis=0)
+    rewards = np.append(rewards, data['rewards'], axis=0)
 
 epochs = 300
-
-for epoch in trange(epochs):
+for epoch in range(epochs):
     for i in range(len(states)-1):
         optimizer.zero_grad()
         output = net(torch.from_numpy(np.append(states[i], actions[i]).astype(np.float32)))
