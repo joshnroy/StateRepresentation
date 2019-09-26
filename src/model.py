@@ -1,7 +1,9 @@
+import torch
 from torch import nn
-import numpy as np
 from torch.nn import functional as F
 import torch.optim as optim
+import numpy as np
+import sys
 from tqdm import tqdm
 from tqdm import trange
 import glob
@@ -35,11 +37,20 @@ for ep_filepath in tqdm(glob.glob("./data/episode*.npz")):
     np.append(actions, data['actions'])
     np.append(rewards, data['rewards'])
 
-for i in trange(len(states) - 1):
-    optimizer.zero_grad()
-    output = net(np.append(states[i], actions[i]))
 
-    loss = criterion(output, np.append(states[i + 1], rewards[i]))
-    print("loss", loss)
-    loss.backward()
-    optimizer.step()
+
+epochs = 300
+
+for epoch in trange(epochs):
+    for i in range(len(states)-1):
+        optimizer.zero_grad()
+        output = net(torch.from_numpy(np.append(states[i], actions[i]).astype(np.float32)))
+
+        loss = criterion(output, torch.from_numpy(np.append(states[i+1], rewards[i]).astype(np.float32)))
+        if i == 0:
+            print("loss", loss)
+            print("true label", np.append(states[i+1], rewards[i]))
+            print("predicted label", output)
+        loss.backward()
+        optimizer.step()
+
