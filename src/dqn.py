@@ -38,6 +38,7 @@ SEED = 5
 EPOCHS = 100
 EPISODES = 200
 GAMMA = 0.95
+EPSILON = 0.01
 
 # Globals
 dream = False
@@ -56,14 +57,20 @@ def world_model(state_action_batch, world_net):
 def optimize_model(world_net):
     for epoch in range(EPOCHS):
         epoch_reward = 0
-        for episode in range(EPISODES):
+        epoch_loss = 0
+        for _ in range(EPISODES):
             done = False
             if dream:
                 init_state = torch.from_numpy(((np.random.random_sample(
                     (4, )) * 0.1) - 0.05).astype('float32'))
             else:
                 init_state = torch.FloatTensor(env.reset())
-            action = policy_net.best_action(init_state)
+
+            if np.random.random_sample((1,))[0] < EPSILON:
+                action = torch.FloatTensor(np.random.choice([0, 1]))
+            else:
+                action = policy_net.best_action(init_state)
+
             state_action = torch.cat(
                 (init_state, action))
             cumulative_reward = 0
@@ -91,21 +98,21 @@ def optimize_model(world_net):
             predicted_batch = torch.stack(predicted_q_values, dim=1)
             expected_batch = torch.stack(expected_q_values, dim=1)
 
-            # Compute Huber loss
-            loss = F.smooth_l1_loss(predicted_batch, expected_batch)
-            
+            # Compute loss
+            loss = F.mse_loss(predicted_batch, expected_batch)
+
             # Optimize the model
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
             epoch_reward += cumulative_reward
+            epoch_loss += loss.item()
 
         # sync policy_net and dqn
         policy_net.load_state_dict(dqn.state_dict())
         if epoch % 1 == 0:
-            print("Epoch", epoch, episode, loss.item(),
-                  epoch_reward / EPISODES)
+            print("Epoch", epoch, epoch_loss/EPISODES, epoch_reward/EPISODES)
         if loss.item() < 1e-9:
             print("Stopping early, loss", loss.item())
             break
