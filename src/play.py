@@ -16,7 +16,7 @@ def plan(agent, state):
     for action in [0,1]:
         state_action_tuple = torch.from_numpy(
                 np.append(state, action).astype('float32'))
-        q_value = agent.forward(state_action_tuple)
+        q_value = agent.forward(state_action_tuple)[action].item()
         if max_qval < q_value:
             best_action = action
             max_qval = q_value

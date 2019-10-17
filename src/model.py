@@ -6,9 +6,10 @@ import numpy as np
 import glob
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-EPOCHS = 200
-train = True
+EPOCHS = 1000
+train = False
 BATCH_SIZE = 10
+WEIGHTS = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.5]).astype('float32')
 
 
 class Net(nn.Module):
@@ -29,16 +30,16 @@ class Net(nn.Module):
         return x
 
 
+def weightedL1Loss(output, label, weights):
+    return torch.mean(torch.mul(torch.abs(output - label), weights))
 
-# def weightedL1Loss(output, label, weights):
-#     output - label
 
 def main():
     net = Net()
     net.to(device)
 
     optimizer = optim.Adam(net.parameters(), lr=1e-3)
-    criterion = nn.L1Loss()
+    criterion = weightedL1Loss
 
     if train:
         # Batch up the data
@@ -48,7 +49,7 @@ def main():
             states = data['states']
             actions = data['actions']
             rewards = data['rewards']
-            terminal = data['terminal'] * 100000
+            terminal = data['terminal']
             episode_batch = []
             for i in range(len(actions)):
                 transition = np.append(states[i], actions[i])
@@ -65,17 +66,18 @@ def main():
             for i in range(0, dataset.shape[0] - BATCH_SIZE, BATCH_SIZE):
                 batch = np.take(dataset, np.arange(i, i + BATCH_SIZE), axis=0)
                 optimizer.zero_grad()
-                input_tensor = torch.from_numpy(batch[:, 0:5].astype(
-                    'float32'))
+                input_tensor = torch.from_numpy(
+                    batch[:, 0:5].astype('float32'))
                 output = net(input_tensor)
                 label = torch.from_numpy(batch[:, 5:].astype('float32'))
                 label = label.to(device)
-                loss = criterion(output, label)
+                loss = criterion(output, label, torch.from_numpy(WEIGHTS))
                 cumulative_loss += loss.item()
                 loss.backward()
                 optimizer.step()
 
-            print("epoch: {:04d}, loss: {:02.6f}".format(epoch, cumulative_loss))
+            print("epoch: {:04d}, loss: {:02.6f}".format(
+                epoch, cumulative_loss))
             if loss < 1e-6:
                 break
 
@@ -83,15 +85,21 @@ def main():
     else:
         net = torch.load("net.pth")
 
-    data = np.load("data/offline_random_episodes/episode0.npz")
+    data = np.load("data/offline_random_episodes/episode11.npz")
     states = data['states']
     actions = data['actions']
     rewards = data['rewards']
-    terminal = data['terminal'] * 100000
+    terminal = data['terminal']
+
     input_tensor = torch.from_numpy(
         np.append(states[-2, :], actions[-1]).astype(np.float32)).to(device)
     print(net(input_tensor))
     print(states[-1, :], rewards[-1], terminal[-1])
+
+    input_tensor = torch.from_numpy(
+        np.append(states[-3, :], actions[-2]).astype(np.float32)).to(device)
+    print(net(input_tensor))
+    print(states[-2, :], rewards[-2], terminal[-2])
 
 
 if __name__ == '__main__':

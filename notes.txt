@@ -1,0 +1,6 @@
+### Real Goals
+1) identify whats important and what is not
+    a) <state, action> has to be sufficient statistic to predict reward, next state and done (?)
+    b) 
+    c) 
+    d)
