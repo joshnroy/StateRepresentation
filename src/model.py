@@ -61,6 +61,7 @@ def main():
 
         for epoch in range(EPOCHS):
             np.random.shuffle(dataset)
+            cumulative_loss = 0
             for i in range(0, dataset.shape[0] - BATCH_SIZE, BATCH_SIZE):
                 batch = np.take(dataset, np.arange(i, i + BATCH_SIZE), axis=0)
                 optimizer.zero_grad()
@@ -70,10 +71,11 @@ def main():
                 label = torch.from_numpy(batch[:, 5:].astype('float32'))
                 label = label.to(device)
                 loss = criterion(output, label)
+                cumulative_loss += loss.item()
                 loss.backward()
                 optimizer.step()
 
-            print("epoch: {:04d}, loss: {:02.6f}".format(epoch, loss.item()))
+            print("epoch: {:04d}, loss: {:02.6f}".format(epoch, cumulative_loss))
             if loss < 1e-6:
                 break
 
