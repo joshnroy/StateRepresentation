@@ -115,10 +115,6 @@ def optimize_model(world_net):
             policy_net.load_state_dict(dqn.state_dict())
         if epoch % 1 == 0:
             print("Epoch", epoch, epoch_loss/EPISODES, epoch_reward/EPISODES)
-        if loss.item() < 1e-9:
-            print("Stopping early, loss", loss.item())
-            break
-
 
 def main():
     world_net = torch.load("net.pth")
