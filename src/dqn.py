@@ -38,6 +38,7 @@ EPOCHS = 100
 EPISODES = 200
 GAMMA = 0.95
 EPSILON = 0.01
+UPDATE_INTERVAL = 2
 
 # Globals
 dream = False
@@ -110,7 +111,8 @@ def optimize_model(world_net):
             epoch_loss += loss.item()
 
         # sync policy_net and dqn
-        policy_net.load_state_dict(dqn.state_dict())
+        if epoch % UPDATE_INTERVAL == 0:
+            policy_net.load_state_dict(dqn.state_dict())
         if epoch % 1 == 0:
             print("Epoch", epoch, epoch_loss/EPISODES, epoch_reward/EPISODES)
         if loss.item() < 1e-9:
