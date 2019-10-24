@@ -1,2 +1,3 @@
 *.zip
 offline_random_episodes/
+*.pyc

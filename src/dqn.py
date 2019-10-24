@@ -6,7 +6,6 @@ import numpy as np
 import gym 
 env = gym.make('CartPole-v0')
 
-
 class DQN(nn.Module):
     def __init__(self):
         super(DQN, self).__init__()
@@ -67,7 +66,8 @@ def optimize_model(world_net):
                 init_state = torch.FloatTensor(env.reset())
 
             if np.random.random_sample((1,))[0] < EPSILON:
-                action = torch.FloatTensor(np.random.choice([0, 1]))
+                choice = np.random.choice([0, 1])
+                action = torch.FloatTensor([choice])
             else:
                 action = policy_net.best_action(init_state)
 
