@@ -9,8 +9,18 @@ from collections import namedtuple
 import gym
 env = gym.make('CartPole-v0')
 
-Transition = namedtuple('Transition',
-                        ('state', 'action', 'next_state', 'reward'))
+# Constants
+SEED = 5
+EPOCHS = 100
+EPISODES = 1000
+GAMMA = 0.95
+EPSILON = 0.1
+UPDATE_INTERVAL = 2000
+BATCHSIZE = 256
+
+Transition = namedtuple(
+    'Transition',
+    ('state', 'action', 'next_action', 'next_state', 'reward', 'not_done'))
 
 
 class ReplayMemory(object):
@@ -60,15 +70,6 @@ class DQN(nn.Module):
         return np.random.randint(0, 1, size=(1, ))
 
 
-# Constants
-SEED = 5
-EPOCHS = 200
-EPISODES = 500
-GAMMA = 0.95
-EPSILON = 0.1
-UPDATE_INTERVAL = 2
-BATCHSIZE = 128
-
 # Globals
 dream = False
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -89,7 +90,7 @@ def get_action(state):
     if np.random.random_sample((1, ))[0] < EPSILON:
         action = torch.FloatTensor([np.random.choice([0, 1])])
     else:
-        action = target_net.best_action(state)
+        action = dqn.best_action(state)
     return action
 
 
@@ -103,6 +104,7 @@ def get_init_state():
 
 
 def training_loop(memory, world_net):
+    global_step = 0
     for epoch in range(EPOCHS):
         epoch_reward = 0
         epoch_value = 0
@@ -123,9 +125,11 @@ def training_loop(memory, world_net):
                 simulated_transition = torch.FloatTensor(transition)
 
             # Push into memory
+            next_action = dqn.best_action(simulated_transition[:4])
             memory.push(state.unsqueeze(1), action.unsqueeze(0),
+                        next_action.unsqueeze(0),
                         simulated_transition[:4].unsqueeze(1),
-                        simulated_transition[4].unsqueeze(0))
+                        simulated_transition[4].unsqueeze(0), not (done))
 
             state = simulated_transition[:4]
             action = get_action(state)
@@ -147,11 +151,12 @@ def training_loop(memory, world_net):
                     epoch_reward += reward_batch.sum().item()
                     epoch_value += predicted_batch.mean().item()
                     epoch_loss += loss.item()
+            global_step += 1
 
+            # sync policy_net and dqn
+            if global_step % UPDATE_INTERVAL == 0:
+                target_net.load_state_dict(dqn.state_dict())
 
-        # sync policy_net and dqn
-        if epoch % UPDATE_INTERVAL == 0:
-            target_net.load_state_dict(dqn.state_dict())
         if epoch % 1 == 0:
             print("Epoch", epoch, epoch_loss / EPISODES,
                   epoch_reward / EPISODES, epoch_value / EPISODES)
@@ -166,17 +171,22 @@ def optimize_model(memory):
                             dim=1).transpose(0, 1).type(torch.FloatTensor)
     next_state_batch = torch.cat(batch.next_state,
                                  dim=1).transpose(0, 1).type(torch.FloatTensor)
+    next_action_batch = torch.cat(batch.next_action,
+                                  dim=1).transpose(0,
+                                                   1).type(torch.FloatTensor)
     action_batch = torch.cat(batch.action,
                              dim=1).transpose(0, 1).type(torch.FloatTensor)
     reward_batch = torch.cat(batch.reward, dim=0).type(torch.FloatTensor)
+    not_final_state_mask = batch.not_done
 
     state_action = torch.cat((state_batch, action_batch), dim=1)
-    next_state_action = torch.cat((next_state_batch, action_batch), dim=1)
+    next_state_action = torch.cat((next_state_batch, next_action_batch), dim=1)
 
     predicted_batch = dqn(state_action).gather(
         1, action_batch.type(torch.LongTensor))
-    expected_batch = reward_batch + (GAMMA *
-                                     target_net(next_state_action).max(1)[0])
+    expected_batch = reward_batch
+    expected_batch[not_final_state_mask] += (
+        GAMMA * target_net(next_state_action).max(1)[0])
     expected_batch = expected_batch.unsqueeze(1)
 
     # Compute loss
