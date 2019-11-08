@@ -16,9 +16,13 @@ env = gym.make('CartPole-v0')
 # Constants
 EPISODES = 500
 GAMMA = 0.95
-EPSILON = 0.1
 UPDATE_INTERVAL = 200
-BATCHSIZE = 50
+BATCHSIZE = 200
+LEARNING_RATE = 1e-3
+
+START_EPSILON = 0.8
+END_EPSILON = 0.1
+EPS_DECAY = 0.99
 
 TEST_EPISODES = 10
 
@@ -51,15 +55,11 @@ class DQN(nn.Module):
     def __init__(self):
         super(DQN, self).__init__()
         self.fc1 = nn.Linear(5, 48)
-        self.fc2 = nn.Linear(48, 48)
-        self.fc3 = nn.Linear(48, 48)
-        self.fc4 = nn.Linear(48, 2)
+        self.fc2 = nn.Linear(48, 2)
 
     def forward(self, x):  # pylint: disable=arguments-differ
         x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        x = self.fc4(x)
+        x = self.fc2(x)
         return x
 
     def best_action(self, x):
@@ -82,7 +82,7 @@ dqn = DQN()
 target_net = DQN()
 target_net.load_state_dict(dqn.state_dict())
 target_net.eval()
-optimizer = optim.Adam(dqn.parameters(), lr=5e-4)
+optimizer = optim.Adam(dqn.parameters(), lr=LEARNING_RATE)
 
 
 def world_model(state_action_batch, world_net):
@@ -112,14 +112,16 @@ def training_loop(memory, world_net):
     global_step = 0
     episode_rewards = []
     episode_losses = []
+    eps = START_EPSILON
     for episode in trange(EPISODES):
         episode_reward = 0
         episode_loss = 0
         episode_len = 0
 
+
         # Make init transition
         state = get_init_state()
-        action = get_action(state, EPSILON)
+        action = get_action(state, eps)
 
         while True:
             state_action = torch.cat((state, action))
@@ -140,13 +142,15 @@ def training_loop(memory, world_net):
                         simulated_transition[4].unsqueeze(0), not (done))
 
             state = simulated_transition[:4]
-            action = get_action(state, EPSILON)
+            action = get_action(state, eps)
 
             if done:
                 if len(memory) >= BATCHSIZE:
                     loss, predicted_batch, reward_batch = optimize_model(
                         memory)
                     episode_loss += loss
+
+                eps = max(eps * EPS_DECAY, END_EPSILON)
                 break
             else:
                 if len(memory) >= BATCHSIZE:
