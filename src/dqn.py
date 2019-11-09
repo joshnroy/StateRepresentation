@@ -135,7 +135,7 @@ def training_loop(memory, world_net):
 
             episode_reward += simulated_transition[4]
             # Push into memory
-            next_action = dqn.best_action(simulated_transition[:4])
+            next_action = target_net.best_action(simulated_transition[:4])
             memory.push(state.unsqueeze(1), action.unsqueeze(0),
                         next_action.unsqueeze(0),
                         simulated_transition[:4].unsqueeze(1),
